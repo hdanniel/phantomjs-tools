@@ -1,13 +1,12 @@
 var page = require('webpage').create(),
     system = require('system'),
-    t, address;
+    address;
 
 if (system.args.length <= 0) {
     console.log('Usage: check_page.js <some URL> <warning> <critical>');
     phantom.exit();
 }
 
-t = Date.now();
 address = system.args[1];
 warning = system.args[2];
 critical = system.args[3];
@@ -17,27 +16,34 @@ page.onLoadStarted = function () {
         page.startTime = new Date();
 };
 
+page.onResourceReceived = function(response) {
+    //console.log('Response (#' + response.id + ', url "' + response.url + '"): ') ;
+    page.resourcesTotal =  response.id;
+};
+
 page.open(address, function (status) {
     if (status !== 'success') {
-        console.log('LOAD CRITICAL - Fail to load ' + address);
+        console.log('PAGE CRITICAL - Fail to load ' + address);
 	exit_code = 2;
     } 
     else {
 	//page.render('');
 	page.endTime = new Date();
-        t = Date.now() - t;
-        if (t > critical) {
-        	console.log('LOAD CRITICAL - ' + t + ' msec');
+        page.loadTime = page.endTime - page.startTime;
+       	console.log(page.resourcesTotal + ' requests');
+        if (page.loadTime > critical) {
+		message = "PAGE CRITICAL";
 		exit_code = 2;
     	}
-        else if (t > warning) {
-        	console.log('LOAD WARNING - ' + t + ' msec');
+        else if (page.loadTime > warning) {
+		message = "PAGE WARNING";
 		exit_code = 1;
     	}
 	else  {
-        	console.log('LOAD OK - ' + t + ' msec');
+		message = "PAGE OK";
 		exit_code = 0;
     	}
+    console.log(message + ' - Load Time: ' + page.loadTime + ' ms, ');
     }
     phantom.exit(exit_code);
 });
